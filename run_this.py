@@ -180,14 +180,9 @@ async def q2_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return 'state_q2'
 
 
-
-
-
-
-
 def main(): 
-    app = Application.builder().token('6181671111:AAFA8OiT0TN4wZm8R6AhqziHmt4VQIhiGwc').build()
-    storage = PicklePersistence(filepath='./storage')
+    storage = PicklePersistence(filepath='./storage/store.pkl')
+    app = Application.builder().token('6181671111:AAFA8OiT0TN4wZm8R6AhqziHmt4VQIhiGwc').persistence(storage).build()
     start_handler = CommandHandler(command='start', callback=start)
     help_handler = CommandHandler(command='help', callback=help)
     conv_handler = ConversationHandler(
@@ -222,9 +217,10 @@ def main():
          
         }, 
         fallbacks=[help_handler],
+        persistent=True,
+        name='the_conversation_handler',
     )
 
-    msg_handler = MessageHandler(filters=filters.Text, callback=q1_handler)
     app.add_handlers(handlers = [conv_handler, help_handler])
     app.run_polling()
 
