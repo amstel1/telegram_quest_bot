@@ -1,10 +1,11 @@
 from telegram.ext import Application, ConversationHandler, CallbackQueryHandler, CommandHandler, ContextTypes, PicklePersistence, MessageHandler
-from telegram.ext import filters
+from telegram.ext import filters, JobQueue, CallbackContext
 
 
 from telegram import Update, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove
-
+from datetime import time
+import pickle
 
 from loguru import logger
 
@@ -40,6 +41,18 @@ answer_2 = 'Ответ 2: . '
 
 quest_over = 'Вы завершили квест .'
 
+
+async def callback_alarm(context: CallbackContext):
+    logger.warning('GOOD, inside callback akarm')
+    with open('./storage/store.pkl', 'rb') as f:
+        persistence_file=pickle.load(f)
+    chats = persistence_file.get('chat_data')
+    for chat_id, chat_details in chats.items():
+        await context.bot.send_message(
+            chat_id=chat_id, 
+            text='Hi, This is a daily reminder qwwewe'
+        )
+
 async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     message = update.effective_message
@@ -68,6 +81,16 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]])
     )
     # await update.message.reply_text('Starting2')  # shit
+
+    await chat.send_message(text='Daily reminder has been set! You\'ll get notified at 10 AM daily')
+    context.job_queue.run_daily(
+        callback_alarm, 
+        # context=update.message.chat_id,
+        chat_id=chat.id,
+        days=(0, 1, 2, 3, 4, 5, 6),
+        time = time(hour = 15, minute = 11, second = 50)  # remember UTC time
+    )
+    logger.warning(context.job_queue)
     return 'state_start'
 
 async def end(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -179,10 +202,25 @@ async def q2_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await chat.send_message(response_incorrect + answer_2 + quest_over)  
         return 'state_q2'
 
+# def send_push_message_to_chat(app: Application):
+#     bot = app.chat_data
+#     logger.warning(bot)
+
+
+# def reminder(update, context):
+#    # bot.send_message(chat_id = update.effective_chat.id , text='Daily reminder has been set! You\'ll get notified at 8 AM daily')
+#    context.job_queue.run_daily(
+#     callback_alarm, 
+#     context=update.message.chat_id,
+#     days=(0, 1, 2, 3, 4, 5, 6),
+#     time = time(hour = 17, minute = 52, second = 10)
+# )
 
 def main(): 
     storage = PicklePersistence(filepath='./storage/store.pkl')
     app = Application.builder().token('6181671111:AAFA8OiT0TN4wZm8R6AhqziHmt4VQIhiGwc').persistence(storage).build()
+    #send_push_message_to_chat(app=app)
+
     start_handler = CommandHandler(command='start', callback=start)
     help_handler = CommandHandler(command='help', callback=help)
     conv_handler = ConversationHandler(
