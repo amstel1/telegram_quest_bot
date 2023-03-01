@@ -196,7 +196,7 @@ async def callback_alarm(context: CallbackContext):
             )
             return 'state_q3'
 
-        if current_state == 'q7':
+        if current_state == 'q6' or current_state == 'q7':
             # понедельник 9-30
             logger.warning(f'alarm q7: {chat_details}, {chat_id}')
             await context.bot.send_message(
@@ -283,8 +283,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await chat.send_message(question_5) 
             return 'state_q5'
         if current_state == 'q6':
-            await chat.send_message(question_6) 
-            return 'state_q6'
+            await chat.send_message(question_7, reply_markup=question_7_reply_markup,) 
+            return 'state_q7'
         if current_state == 'q7':
             await chat.send_message(question_7, reply_markup=question_7_reply_markup,) 
             return 'state_q7'
