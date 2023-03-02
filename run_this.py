@@ -4,10 +4,12 @@ from telegram.ext import filters, JobQueue, CallbackContext
 from telegram import Update, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove
 from datetime import time
+import os
 import pickle
 from random import sample
 from loguru import logger
-logger.level = DEBUG
+logger.add('logfile.log')
+logger.level = 5
 
 gif_successful_links = [
     'https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExZDUwMjllMzFmMjNlNjA1Nzg5NDk2YjAwOTg4ZGUxODJjZGU2NjhlYSZjdD1n/YnBntKOgnUSBkV7bQH/giphy.gif',
@@ -15,25 +17,29 @@ gif_successful_links = [
     'https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExNWZmYzZhOWFhN2E0NjBjYTg2MGQ1MzFhOTVhMjRmY2U4ZGY1M2NhYiZjdD1n/JltOMwYmi0VrO/giphy.gif',
     'https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExNTk4ZDg4YTlhNWE5Y2VkNTBhMDEyZTRlODZjMzc5NWM5OTQ0MGY2MSZjdD1n/XR9Dp54ZC4dji/giphy.gif',
     'https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExMDc2NTQzZTRjNWEzOWFlZDVkMDJlZDY4NWYxNjVhZTQ1YmFjMTkwOCZjdD1n/otnqsqqzmsw7K/giphy.gif',
-    # 'https://media0.giphy.com/media/rY93u9tQbybks/giphy.gif?cid=ecf05e47yz6x2hy33sfrl7ng5lb97jqxg1n1cwgf4msb659n&rid=giphy.gif&ct=g',
-    # 'https://media3.giphy.com/media/DhstvI3zZ598Nb1rFf/200.webp?cid=ecf05e476epn4tdvbu1410tr14e29um6j69rts12nido75on&rid=200.webp&ct=g',
-    # 'https://media1.giphy.com/media/YJ5OlVLZ2QNl6/200.webp?cid=ecf05e47hi9sqkicu02xvwfjd3mwtt8lkftpca588j4h6ztp&rid=200.webp&ct=g',
-    # 'https://media3.giphy.com/media/iPTTjEt19igne/200w.webp?cid=ecf05e47lrrgfbcnoh83pv1ir25sn1bfnkea8xt7yg35zf4r&rid=200w.webp&ct=g',
-    # 'https://media0.giphy.com/media/Y1M2JOQ7W79q5YhTp5/200w.webp?cid=ecf05e47j4q00muoz21wkwkdllqofe0mxpza8s36rlqu7ywb&rid=200w.webp&ct=g',
+    'https://tvovermind.com/wp-content/uploads/2017/04/gastsby-whatgatsby.jpg.gif',
+    'https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExZmJhYmIyMDM0Y2NjY2NmNDk4MGU5YTU5MTk5NGQ5MmVkODBiMWZiMSZjdD1n/DhstvI3zZ598Nb1rFf/giphy.gif',
+    'https://i.gifer.com/C6b.gif',
+    'https://i.gifer.com/LcY.gif',
+    'https://i.gifer.com/4GK.gif',
+    'https://i.gifer.com/2gh.gif',
+    'https://i.gifer.com/HQcK.gif',
 ]
 gif_unsuccessful_links = [
     'https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExNTcxOTg3ZmJlMTExZTc1OTA2MTIyNGNmY2Y0MDIxYjAzZjg3NzkyNCZjdD1n/nbNWgtnMgIYpUSy3e9/giphy.gif',
-    # 'https://media4.giphy.com/media/13hZhFPOC0Wxt6/200w.webp?cid=ecf05e47dehqen62yelkcoaemegcbld8spkvu3i15dzbj6ha&rid=200w.webp&ct=g',
-    # 'https://media1.giphy.com/media/Cc33x00kRXRlu/100.webp?cid=ecf05e47vui9fybsu2ouvjs7d5o5rscq6592u3hmbkqjx1qv&rid=100.webp&ct=g',
-    # 'https://media0.giphy.com/media/7SF5scGB2AFrgsXP63/200w.webp?cid=ecf05e471x5jmjr3lgp4qzdnr3n1759c6sq7sucwilzs4ds4&rid=200w.webp&ct=g',
-    # 'https://media1.giphy.com/media/BEob5qwFkSJ7G/200.webp?cid=ecf05e471x5jmjr3lgp4qzdnr3n1759c6sq7sucwilzs4ds4&rid=200.webp&ct=g', 
-    # 'https://media2.giphy.com/media/TU76e2JHkPchG/200w.webp?cid=ecf05e47fo7a5iayvmf5n79f11vouueoppdi84pkgce2wv4g&rid=200w.webp&ct=g',
-    # 'https://media4.giphy.com/media/oFeYuQKteOf0xEsCtj/200.webp?cid=ecf05e47fo7a5iayvmf5n79f11vouueoppdi84pkgce2wv4g&rid=200.webp&ct=g',
-    # 'https://media0.giphy.com/media/9lusxBBUsTz8Fk029b/200w.webp?cid=ecf05e47ibrjrytzhwdf2dvuhuwsjtrpsgwvhrw61kpy89qv&rid=200w.webp&ct=g',
-    # 'https://media1.giphy.com/media/l3q2K5jinAlChoCLS/200w.webp?cid=ecf05e47ibrjrytzhwdf2dvuhuwsjtrpsgwvhrw61kpy89qv&rid=200w.webp&ct=g',
-    # 'https://media4.giphy.com/media/gVE7nURcnD9bW/giphy.webp?cid=ecf05e47ibrjrytzhwdf2dvuhuwsjtrpsgwvhrw61kpy89qv&rid=giphy.webp&ct=g',
-    # 'https://media3.giphy.com/media/xThta2S6BM1yIzVHqw/200w.webp?cid=ecf05e472xdd31g8gk8qjfisivc2g6fhp6fleh20dsbopfwt&rid=200w.webp&ct=g',
-    # 'https://media1.giphy.com/media/2XUwQVP8Of44g/200w.webp?cid=ecf05e47t3ra0grnvoaf9o0ul1uii8en6pcnyusibk8p1snb&rid=200w.webp&ct=g',
+    'https://i.gifer.com/XZ9.gif',
+    'https://i.gifer.com/Q7qB.gif',
+    'https://i.gifer.com/5rt.gif',
+    'https://i.gifer.com/2Bz.gif',
+    'https://i.gifer.com/1gpI.gif',
+    'https://i.gifer.com/1guZ.gif',
+    'https://i.gifer.com/Pr6.gif',
+    'https://i.gifer.com/OJi.gif',
+    'https://i.gifer.com/3053.gif',
+    'https://i.gifer.com/fxWj.gif',
+    'https://i.gifer.com/Xur.gif',
+    'https://i.gifer.com/ULHk.gif',
+
 ]
 gif_begging_links = [
 
@@ -66,7 +72,8 @@ question_1 = '''
 '''
 question_1_hint_1 = 'Найди место, где все отдыхают. '
 question_1_hint_2 = 'Шифр там, где ты навела камеру '
-answer_1 = '111273'
+answer_1_a = '111273'
+answer_1_b = '273111'
 
 
 question_2 = 'Найди еще одну отгадку за машиной, которая рисует и клонирует'
@@ -84,7 +91,7 @@ question_2_hint_2_reply_markup = InlineKeyboardMarkup(inline_keyboard=[[
                             InlineKeyboardButton(text='Нашел', callback_data='q2_h2_correct'), 
                             InlineKeyboardButton(text='Не нашел', callback_data='q2_h2_incorrect')
         ]])
-answer_2 = 'Нашел - отлично, ты уже ближе к отгадке. Но сможешь ли ты разгадать все секреты? Я пришлю тебе загадку завтра в 12:00.'
+answer_2 = 'Нашел - отлично, ты уже ближе к отгадке. Но сможешь ли ты разгадать все секреты? Я пришлю тебе загадку сегодня в 14:25.'
 
 
 question_3 = '''
@@ -183,7 +190,7 @@ QUESTIONS = {
 }
 
 ANSWERS = {
-    1: answer_1, 
+    1: answer_1_a+'|'+answer_1_b, 
     2: answer_2, 
     3: answer_3, 
     4: answer_4, 
@@ -232,7 +239,7 @@ async def callback_alarm(context: CallbackContext):
 
         if current_state == 'q3':
             # пятница 14-20
-            logger.warning(f'alarm q7: {chat_details}, {chat_id}')
+            logger.warning(f'alarm q3: {chat_details}, {chat_id}')
             await context.bot.send_message(
                 chat_id=chat_id, 
                 text=question_3
@@ -241,7 +248,7 @@ async def callback_alarm(context: CallbackContext):
 
         if current_state == 'q6' or current_state == 'q7':
             # понедельник 9-30
-            logger.warning(f'alarm q7: {chat_details}, {chat_id}')
+            logger.warning(f'alarm q[6-7]: {chat_details}, {chat_id}')
             await context.bot.send_message(
                 chat_id=chat_id, 
                 text=question_7,
@@ -267,7 +274,7 @@ async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info(f'{chat}')
     logger.info(f'{user}')
     logger.info(f'{message}')
-    await chat.send_message('Oops! Обратитесь к разработчикам')
+    await chat.send_message('Попробуйте ответить на вопрос. Если не получается - напишите /start')
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -285,28 +292,29 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ]])
         )
 
-        logger.debug(f'Заводим расписание: callback_alarm, ')
-        context.job_queue.run_daily(
-            callback_alarm, 
-            chat_id=chat.id,
-            days=(4,), # пятница
-            time = time(hour = 11, minute = 20, second = 1)  # remember UTC time, 14-20 минск
-        )
-        context.job_queue.run_daily(
-            callback_alarm, 
-            chat_id=chat.id,
-            days=(0,), # понедельник
-            time = time(hour = 6, minute = 30, second = 1)  # remember UTC time, 9-30 минск
-        )
-        context.job_queue.run_daily(
-            callback_alarm, 
-            chat_id=chat.id,
-            days=(1,), # вторник
-            time = time(hour = 6, minute = 0, second = 1)  # remember UTC time, 9-00 минск
-        )
+        # logger.debug(f'Заводим расписание: callback_alarm, ')
+        # context.job_queue.run_daily(
+        #     callback_alarm, 
+        #     chat_id=chat.id,
+        #     days=(4,), # пятница=4
+        #     time = time(hour = 20, minute = 30, second = 30)  # remember UTC time, 14-20 минск 11 20 1
+        # )
+        # context.job_queue.run_daily(
+        #     callback_alarm, 
+        #     chat_id=chat.id,
+        #     days=(0,), # понедельник
+        #     time = time(hour = 6, minute = 30, second = 1)  # remember UTC time, 9-30 минск
+        # )
+        # context.job_queue.run_daily(
+        #     callback_alarm, 
+        #     chat_id=chat.id,
+        #     days=(1,), # вторник
+        #     time = time(hour = 6, minute = 0, second = 1)  # remember UTC time, 9-00 минск
+        # )
         return 'state_start'
     if 'current_state' in chat_data:
         current_state = chat_data.get('current_state')
+        logger.debug(f'welcome back - start - {current_state}, {chat}, {chat_data}')
         if current_state == 'start':
             await chat.send_message(question_1) 
             return 'state_q1'
@@ -325,10 +333,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if current_state == 'q5':
             await chat.send_message(question_5) 
             return 'state_q5'
-        if current_state == 'q6':
+        if current_state in ('q6', 'q6_h1', 'q6_h2'):
+            # тут верно, счастье любит тишину - ответили неверно, но потом ничего не сделали => верно
             await chat.send_message(question_7, reply_markup=question_7_reply_markup,) 
             return 'state_q7'
         if current_state == 'q7':
+            # тут верно, счастье любит тишину - ответили верно => верно
             await chat.send_message(question_7, reply_markup=question_7_reply_markup,) 
             return 'state_q7'
         if current_state == 'q8':
@@ -344,13 +354,19 @@ async def end(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.effective_message
     chat = update.effective_chat
     chat_data = context.chat_data
+    if 'current_state' not in chat_data:
+        chat_data['current_state'] = 'q1'
+    elif 'current_state' in chat_data and chat_data['current_state'] == 'start':
+        logger.debug(f'end {chat}')
+        chat_data['current_state'] = 'q1'
+
     logger.info(f'{chat}_{user}_{message}')
     await chat.send_message('Работа не волк, работа - work.') 
     await chat.send_animation(
              
             animation=gif_sad_1,
             )
-    logger.info('implement here')
+    logger.warning(f'{user} - ended')
     return ConversationHandler.END
  
 
@@ -363,7 +379,7 @@ async def q1_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     answer = update.callback_query
     user_input = update.effective_message.text
     current_state = chat_data.get('current_state')
-
+    logger.debug(f'q1 {current_state} {chat} - {chat_data}')
     if current_state == 'start':
         chat_data['current_state'] = f'q{q}'
         await chat.send_animation(
@@ -373,7 +389,7 @@ async def q1_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return f'state_q{q}'
     
     if chat_data.get('current_state') == f'q{q}':
-        if user_input.lower().strip() == ANSWERS[q]:
+        if (user_input.lower().strip() == answer_1_a) or (user_input.lower().strip() == answer_1_b):
             chat_data['current_state'] = f'q{q+1}'
             await chat.send_message(response_correct)
             await chat.send_animation(
@@ -393,7 +409,7 @@ async def q1_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif current_state == f'q{q}_h1':
         # сейчас first hint
-        if user_input.lower().strip() == ANSWERS[q]:
+        if (user_input.lower().strip() == answer_1_a) or (user_input.lower().strip() == answer_1_b):
             chat_data['current_state'] = f'q{q+1}'
             await chat.send_message(response_correct)
             await chat.send_animation(
@@ -413,7 +429,7 @@ async def q1_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
     elif current_state == f'q{q}_h2':
         # сейчас second hint
-        if user_input.lower().strip() == ANSWERS[q]:
+        if (user_input.lower().strip() == answer_1_a) or (user_input.lower().strip() == answer_1_b):
             chat_data['current_state'] = f'q{q+1}'
             await chat.send_message(response_correct)
             await chat.send_animation(
@@ -424,11 +440,12 @@ async def q1_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return f'state_q{q+1}'
         else:
             chat_data['current_state'] = f'q{q+1}'
+            await chat.send_message(response_incorrect)
             await chat.send_animation(
                  
                 animation=sample(gif_unsuccessful_links, k=1)[0],
             )
-            await chat.send_message(response_incorrect + ANSWERS[q])   
+            await chat.send_message(ANSWERS[q])   
             await chat.send_message(QUESTIONS[q+1], reply_markup=question_2_reply_markup)    
             return f'state_q{q+1}'
         
@@ -440,9 +457,9 @@ async def q2_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat
     answer = update.callback_query
     callback_text = answer.data
+    logger.debug(f'q{q}{callback_text} {chat} - {chat_data}')
     if callback_text == f'q{q}_correct':
         chat_data['current_state'] = f'q{q+1}'
-        await chat.send_message(response_correct) 
         await chat.send_message(ANSWERS[q]) 
         await chat.send_animation(
                  
@@ -455,17 +472,14 @@ async def q2_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if callback_text == f'q{q}_incorrect':
         chat_data['current_state'] = f'q{q}'
         await chat.send_animation(
-                 
                 animation=sample(gif_unsuccessful_links, k=1)[0],
             )
-        await chat.send_message(response_incorrect + HINTS_1[q], reply_markup=question_2_hint_1_reply_markup)  
+        await chat.send_message(HINTS_1[q], reply_markup=question_2_hint_1_reply_markup)  
         return f'state_q{q}'
     if callback_text == f'q{q}_h1_correct':
         chat_data['current_state'] = f'q{q+1}'
-        await chat.send_message(response_correct) 
         await chat.send_message(ANSWERS[q]) 
         await chat.send_animation(
-                 
                 animation=sample(gif_successful_links, k=1)[0],
             )
         if DEBUG:
@@ -474,17 +488,14 @@ async def q2_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if callback_text == f'q{q}_h1_incorrect':
         chat_data['current_state'] = f'q{q}'
         await chat.send_animation(
-                 
                 animation=sample(gif_unsuccessful_links, k=1)[0],
             )
-        await chat.send_message(response_incorrect + HINTS_2[q], reply_markup=question_2_hint_2_reply_markup)  
+        await chat.send_message(HINTS_2[q], reply_markup=question_2_hint_2_reply_markup)  
         return f'state_q{q}'
     if callback_text == f'q{q}_h2_correct':
         chat_data['current_state'] = f'q{q+1}'
-        await chat.send_message(response_correct) 
         await chat.send_message(ANSWERS[q]) 
         await chat.send_animation(
-                 
                 animation=sample(gif_successful_links, k=1)[0],
             )
         if DEBUG:
@@ -493,10 +504,8 @@ async def q2_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if callback_text == f'q{q}_h2_incorrect':
         chat_data['current_state'] = f'q{q+1}'
         await chat.send_animation(
-                 
                 animation=sample(gif_unsuccessful_links, k=1)[0],
             )
-        await chat.send_message(response_incorrect)  
         await chat.send_message(ANSWERS[q]) 
         if DEBUG:
             return ConversationHandler.END  # конец дня 1
@@ -511,24 +520,24 @@ async def q3_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     answer = update.callback_query
     user_input = update.effective_message.text
     current_state = chat_data.get('current_state')
-    
+    logger.debug(f'q{q} {current_state} {chat} - {chat_data}')
+
     if chat_data.get('current_state') == f'q{q}':
         if user_input.lower().replace(' ','').replace('-','').replace(':','') == ANSWERS[q].replace(':',''):
             chat_data['current_state'] = f'q{q+1}'
             await chat.send_message(response_correct)
             await chat.send_animation(
-                 
                 animation=sample(gif_successful_links, k=1)[0],
             )
             await chat.send_message(QUESTIONS[q+1],)
             return f'state_q{q+1}'
         else:
             chat_data['current_state'] = f'q{q}_h1'
+            await chat.send_message(response_incorrect)
             await chat.send_animation(
-                 
                 animation=sample(gif_unsuccessful_links, k=1)[0],
             )
-            await chat.send_message(response_incorrect + HINTS_1[q])
+            await chat.send_message(HINTS_1[q])
             return f'state_q{q}'
 
     elif current_state == f'q{q}_h1':
@@ -536,18 +545,17 @@ async def q3_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             chat_data['current_state'] = f'q{q+1}'
             await chat.send_message(response_correct) 
             await chat.send_animation(
-                 
                 animation=sample(gif_successful_links, k=1)[0],
             )
-            await chat.send_message(ANSWERS[q]) 
+            await chat.send_message(QUESTIONS[q+1],)
             return f'state_q{q+1}'
         else:
             chat_data['current_state'] = f'q{q}_h2'
+            await chat.send_message(response_incorrect)
             await chat.send_animation(
-                 
                 animation=sample(gif_unsuccessful_links, k=1)[0],
             )
-            await chat.send_message(response_incorrect + HINTS_2[q])       
+            await chat.send_message(HINTS_2[q])       
         return f'state_q{q}'
         
     elif current_state == f'q{q}_h2':
@@ -555,19 +563,18 @@ async def q3_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             chat_data['current_state'] = f'q{q+1}'
             await chat.send_message(response_correct)
             await chat.send_animation(
-                 
                 animation=sample(gif_successful_links, k=1)[0],
             )            
-            await chat.send_message(QUESTIONS[q],)
+            await chat.send_message(QUESTIONS[q+1],)
             return f'state_q{q+1}'
         else:
             chat_data['current_state'] = f'q{q+1}'
+            await chat.send_message(response_incorrect)
             await chat.send_animation(
-                 
                 animation=sample(gif_unsuccessful_links, k=1)[0],
             )
-            await chat.send_message(response_incorrect + ANSWERS[q])   
-            await chat.send_message(QUESTIONS[q],)    
+            await chat.send_message(ANSWERS[q])   
+            await chat.send_message(QUESTIONS[q+1],)    
         return f'state_q{q+1}'
 
 
@@ -579,24 +586,23 @@ async def q4_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     answer = update.callback_query
     user_input = update.effective_message.text
     current_state = chat_data.get('current_state')
-
+    logger.debug(f'q{q} {current_state} {chat} - {chat_data}')
     if chat_data.get('current_state') == f'q{q}':
         if user_input.lower().replace(' ','').replace('-','').replace(':','') == ANSWERS[q].replace(':',''):
             chat_data['current_state'] = f'q{q+1}'
             await chat.send_message(response_correct)
             await chat.send_animation(
-                 
                 animation=sample(gif_successful_links, k=1)[0],
             )
             await chat.send_message(QUESTIONS[q+1],)
             return f'state_q{q+1}'
         else:
             chat_data['current_state'] = f'q{q}_h1'
+            await chat.send_message(response_incorrect)
             await chat.send_animation(
-                 
                 animation=sample(gif_unsuccessful_links, k=1)[0],
             )
-            await chat.send_message(response_incorrect + HINTS_1[q])
+            await chat.send_message(HINTS_1[q])
             return f'state_q{q}'
 
     elif current_state == f'q{q}_h1':
@@ -604,18 +610,17 @@ async def q4_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             chat_data['current_state'] = f'q{q+1}'
             await chat.send_message(response_correct) 
             await chat.send_animation(
-                 
                 animation=sample(gif_successful_links, k=1)[0],
             )
-            await chat.send_message(ANSWERS[q]) 
+            await chat.send_message(QUESTIONS[q+1],)
             return f'state_q{q+1}'
         else:
             chat_data['current_state'] = f'q{q}_h2'
+            await chat.send_message(response_incorrect)
             await chat.send_animation(
-                 
                 animation=sample(gif_unsuccessful_links, k=1)[0],
             )
-            await chat.send_message(response_incorrect + HINTS_2[q])       
+            await chat.send_message(HINTS_2[q])       
             return f'state_q{q}'
         
     elif current_state == f'q{q}_h2':
@@ -623,18 +628,17 @@ async def q4_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             chat_data['current_state'] = f'q{q+1}'
             await chat.send_message(response_correct)
             await chat.send_animation(
-                 
                 animation=sample(gif_successful_links, k=1)[0],
             )
             await chat.send_message(QUESTIONS[q+1],)
             return f'state_q{q+1}'
         else:
             chat_data['current_state'] = f'q{q+1}'
+            await chat.send_message(response_incorrect)
             await chat.send_animation(
-                 
                 animation=sample(gif_unsuccessful_links, k=1)[0],
             )
-            await chat.send_message(response_incorrect + ANSWERS[q])   
+            await chat.send_message(ANSWERS[q])   
             await chat.send_message(QUESTIONS[q+1],)    
             return f'state_q{q+1}'
 
@@ -648,24 +652,24 @@ async def q5_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     answer = update.callback_query
     user_input = update.effective_message.text
     current_state = chat_data.get('current_state')
+    logger.debug(f'q{q} {current_state} {chat} - {chat_data}')
     
     if chat_data.get('current_state') == f'q{q}':
         if user_input.lower().replace(' ','').replace('-','').replace(':','') == ANSWERS[q].replace(':',''):
             chat_data['current_state'] = f'q{q+1}'
             await chat.send_message(response_correct)
             await chat.send_animation(
-                 
                 animation=sample(gif_successful_links, k=1)[0],
             )
             await chat.send_message(QUESTIONS[q+1],)
             return f'state_q{q+1}'
         else:
             chat_data['current_state'] = f'q{q}_h1'
+            await chat.send_message(response_incorrect)
             await chat.send_animation(
-                 
                 animation=sample(gif_unsuccessful_links, k=1)[0],
             )
-            await chat.send_message(response_incorrect + HINTS_1[q])
+            await chat.send_message(HINTS_1[q])
             return f'state_q{q}'
 
     elif current_state == f'q{q}_h1':
@@ -673,18 +677,17 @@ async def q5_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             chat_data['current_state'] = f'q{q+1}'
             await chat.send_message(response_correct) 
             await chat.send_animation(
-                 
                 animation=sample(gif_successful_links, k=1)[0],
             )
-            await chat.send_message(ANSWERS[q]) 
+            await chat.send_message(QUESTIONS[q+1],)
             return f'state_q{q+1}'
         else:
             chat_data['current_state'] = f'q{q}_h2'
+            await chat.send_message(response_incorrect)
             await chat.send_animation(
-                 
                 animation=sample(gif_unsuccessful_links, k=1)[0],
             )
-            await chat.send_message(response_incorrect + HINTS_2[q])       
+            await chat.send_message(HINTS_2[q])       
             return f'state_q{q}'
         
     elif current_state == f'q{q}_h2':
@@ -692,94 +695,88 @@ async def q5_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             chat_data['current_state'] = f'q{q+1}'
             await chat.send_message(response_correct)
             await chat.send_animation(
-                 
                 animation=sample(gif_successful_links, k=1)[0],
             )
             await chat.send_message(QUESTIONS[q+1],)
             return f'state_q{q+1}'
         else:
             chat_data['current_state'] = f'q{q+1}'
+            await chat.send_message(response_incorrect)   
+            await chat.send_message(ANSWERS[q])
             await chat.send_animation(
-                 
                 animation=sample(gif_unsuccessful_links, k=1)[0],
             )
-            await chat.send_message(response_incorrect + ANSWERS[q])   
             await chat.send_message(QUESTIONS[q+1],)    
             return f'state_q{q+1}'
 
 
 async def q6_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     '''text handler'''
+    # q: Счастье любит тишину
     q = 6
     chat_data = context.chat_data
     chat = update.effective_chat
     answer = update.callback_query
     user_input = update.effective_message.text
     current_state = chat_data.get('current_state')
+    logger.debug(f'q{q} {current_state} {chat} - {chat_data}')
     
     if chat_data.get('current_state') == f'q{q}':
-        if user_input.lower().replace('-','').replace(':','') == ANSWERS[q].replace(':',''):
-            chat_data['current_state'] = f'q{q+1}'
-            await chat.send_message(response_correct)
+        chat_data['current_state'] = f'q{q+1}'  # opposite to other scenarios
+        if user_input:
+            chat_data['current_state'] = f'q{q}_h1' # opposite to other scenarios
+            await chat.send_message(response_incorrect)
             await chat.send_animation(
-                 
-                animation=sample(gif_successful_links, k=1)[0],
-            )
-            await chat.send_message(QUESTIONS[q+1], reply_markup=question_7_reply_markup)
-            if DEBUG:
-                return ConversationHandler.END  # конец дня 1
-            return f'state_q{q+1}'
-        else:
-            chat_data['current_state'] = f'q{q}_h1'
-            await chat.send_animation(
-                 
                 animation=sample(gif_unsuccessful_links, k=1)[0],
             )
-            await chat.send_message(response_incorrect + HINTS_1[q])
+            await chat.send_message(HINTS_1[q])
+            #await chat.send_message(QUESTIONS[q+1], reply_markup=question_7_reply_markup)
+            #if DEBUG:
+            #    return ConversationHandler.END  # конец дня 
             return f'state_q{q}'
+        else:
+            if DEBUG:
+                return ConversationHandler.END  # конец дня 
+            return f'state_q{q+1}'
 
     elif current_state == f'q{q}_h1':
-        if user_input.lower().replace('-','').replace(':','') == ANSWERS[q].replace(':',''):
-            chat_data['current_state'] = f'q{q+1}'
-            if DEBUG:
-                return ConversationHandler.END  # конец дня 1
+        chat_data['current_state'] = f'q{q+1}'  # opposite to other scenarios
+        if user_input:
+            chat_data['current_state'] = f'q{q}_h2' # opposite to other scenarios
+            await chat.send_message(response_incorrect)
             await chat.send_animation(
-                 
-                animation=sample(gif_successful_links, k=1)[0],
-            )
-            await chat.send_message(response_correct + QUESTIONS[q+1], reply_markup=question_7_reply_markup)
-            return f'state_q{q+1}'
-        else:
-            chat_data['current_state'] = f'q{q}_h2'
-            await chat.send_animation(
-                 
                 animation=sample(gif_unsuccessful_links, k=1)[0],
             )
-            await chat.send_message(response_incorrect + HINTS_2[q])       
+            await chat.send_message(HINTS_2[q])
+            #await chat.send_message(QUESTIONS[q+1], reply_markup=question_7_reply_markup) 
             return f'state_q{q}'
+        else:
+            if DEBUG:
+                return ConversationHandler.END  # конец дня
+            return f'state_q{q+1}'
         
     elif current_state == f'q{q}_h2':
-        if user_input.lower().replace('-','').replace(':','') == ANSWERS[q].replace(':',''):
+        chat_data['current_state'] = f'q{q+1}'  # opposite to other scenarios
+        if user_input:
+            chat_data['current_state'] = f'q{q+1}'
+            await chat.send_message(response_incorrect)
+            await chat.send_animation(
+                animation=sample(gif_unsuccessful_links, k=1)[0],
+            )
+            if DEBUG:
+                return ConversationHandler.END  # конец дня 1
+            # await chat.send_message(QUESTIONS[q+1], reply_markup=question_7_reply_markup)
+            return f'state_q{q+1}'
+        else:
             chat_data['current_state'] = f'q{q+1}'
             await chat.send_message(response_correct)
             await chat.send_animation(
-                 
                 animation=sample(gif_successful_links, k=1)[0],
             )
+            await chat.send_message(ANSWERS[q])   
             if DEBUG:
                 return ConversationHandler.END  # конец дня 1
-            await chat.send_message(QUESTIONS[q+1], reply_markup=question_7_reply_markup)
-            return f'state_q{q+1}'
-        else:
-            chat_data['current_state'] = f'q{q+1}'
-            await chat.send_animation(
-                 
-                animation=sample(gif_unsuccessful_links, k=1)[0],
-            )
-            await chat.send_message(response_incorrect + ANSWERS[q])   
-            if DEBUG:
-                return ConversationHandler.END  # конец дня 1
-            await chat.send_message(QUESTIONS[q+1], reply_markup=question_7_reply_markup)  
+            # await chat.send_message(QUESTIONS[q+1], reply_markup=question_7_reply_markup)  
             return f'state_q{q+1}'
 
 
@@ -790,11 +787,12 @@ async def q7_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat
     answer = update.callback_query
     callback_text = answer.data
+    logger.debug(f'q{q} {callback_text} {chat} - {chat_data}')
+
     if callback_text == f'q{q}_correct':
         chat_data['current_state'] = f'q{q+1}'
-        await chat.send_message(ANSWERS[q]) 
+        await chat.send_message(response_correct) 
         await chat.send_animation(
-                 
                 animation=sample(gif_successful_links, k=1)[0],
             )
         await chat.send_message(QUESTIONS[q+1]) 
@@ -802,14 +800,13 @@ async def q7_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if callback_text == f'q{q}_incorrect':
         chat_data['current_state'] = f'q{q}'
         await chat.send_animation(
-                 
                 animation=sample(gif_unsuccessful_links, k=1)[0],
             )
-        await chat.send_message(response_incorrect + HINTS_1[q], reply_markup=question_7_hint_1_reply_markup)  
+        await chat.send_message(HINTS_1[q], reply_markup=question_7_hint_1_reply_markup)  
         return f'state_q{q}'
     if callback_text == f'q{q}_h1_correct':
         chat_data['current_state'] = f'q{q+1}'
-        await chat.send_message(ANSWERS[q]) 
+        await chat.send_message(response_correct) 
         await chat.send_animation(
                  
                 animation=sample(gif_successful_links, k=1)[0],
@@ -819,27 +816,24 @@ async def q7_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if callback_text == f'q{q}_h1_incorrect':
         chat_data['current_state'] = f'q{q}'
         await chat.send_animation(
-                 
                 animation=sample(gif_unsuccessful_links, k=1)[0],
             )
-        await chat.send_message(response_incorrect + HINTS_2[q], reply_markup=question_7_hint_2_reply_markup)  
+        await chat.send_message(HINTS_2[q], reply_markup=question_7_hint_2_reply_markup)  
         return f'state_q{q}'
     if callback_text == f'q{q}_h2_correct':
         chat_data['current_state'] = f'q{q+1}'
-        await chat.send_message(ANSWERS[q]) 
+        await chat.send_message(response_correct) 
         await chat.send_animation(
-                 
                 animation=sample(gif_successful_links, k=1)[0],
             )
         await chat.send_message(QUESTIONS[q+1]) 
         return f'state_q{q+1}'
     if callback_text == f'q{q}_h2_incorrect':
         chat_data['current_state'] = f'q{q+1}'
+        await chat.send_message(response_incorrect)  
         await chat.send_animation(
-                 
                 animation=sample(gif_unsuccessful_links, k=1)[0],
             )
-        await chat.send_message(response_incorrect)  
         await chat.send_message(ANSWERS[q]) 
         await chat.send_message(QUESTIONS[q+1]) 
         return f'state_q{q+1}'
@@ -853,23 +847,23 @@ async def q8_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     answer = update.callback_query
     user_input = update.effective_message.text
     current_state = chat_data.get('current_state')
+    logger.debug(f'q{q} {current_state} {chat} - {chat_data}')
     
     if chat_data.get('current_state') == f'q{q}':
         if user_input.lower().replace(' ','').replace('-','').replace(':','') == ANSWERS[q].replace(':',''):
             chat_data['current_state'] = f'q{q+1}'
             await chat.send_message(response_correct)
             await chat.send_animation(
-                 
                 animation=sample(gif_successful_links, k=1)[0],
             )
             await chat.send_message(post_answer_8)
+            # await chat.send_message(QUESTIONS[q+1],)
             if DEBUG:
                 return ConversationHandler.END  # конец дня 1
             return f'state_q{q+1}'
         else:
             chat_data['current_state'] = f'q{q}_h1'
             await chat.send_animation(
-                 
                 animation=sample(gif_unsuccessful_links, k=1)[0],
             )
             await chat.send_message(response_incorrect + HINTS_1[q])
@@ -879,18 +873,17 @@ async def q8_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if user_input.lower().replace(' ','').replace('-','').replace(':','') == ANSWERS[q].replace(':',''):
             chat_data['current_state'] = f'q{q+1}'
             await chat.send_animation(
-                 
                 animation=sample(gif_successful_links, k=1)[0],
             )
             await chat.send_message(response_correct)
             await chat.send_message(post_answer_8)
+            # await chat.send_message(QUESTIONS[q+1],)
             if DEBUG:
                 return ConversationHandler.END  # конец дня 1
             return f'state_q{q+1}'
         else:
             chat_data['current_state'] = f'q{q}_h2'
             await chat.send_animation(
-                 
                 animation=sample(gif_unsuccessful_links, k=1)[0],
             )
             await chat.send_message(response_incorrect + HINTS_2[q])       
@@ -901,10 +894,10 @@ async def q8_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             chat_data['current_state'] = f'q{q+1}'
             await chat.send_message(response_correct)
             await chat.send_animation(
-                 
                 animation=sample(gif_successful_links, k=1)[0],
             )
             await chat.send_message(post_answer_8)
+            # await chat.send_message(QUESTIONS[q+1],)
             if DEBUG:
                 return ConversationHandler.END  # конец дня 1
             return f'state_q{q+1}'
@@ -916,6 +909,7 @@ async def q8_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             await chat.send_message(response_incorrect + ANSWERS[q])  
             await chat.send_message(post_answer_8)
+            # await chat.send_message(QUESTIONS[q+1],)
             if DEBUG:
                 return ConversationHandler.END  # конец дня 1
             return f'state_q{q+1}'
@@ -929,6 +923,7 @@ async def q9_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     answer = update.callback_query
     user_input = update.effective_message.text
     current_state = chat_data.get('current_state')
+    logger.debug(f'q{q} {current_state} {chat} - {chat_data}')
     
     if chat_data.get('current_state') == f'q{q}':
         if user_input.lower().replace(' ','').replace('-','').replace(':','') == ANSWERS[q].replace(':',''):
@@ -998,8 +993,33 @@ async def q9_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 def main(): 
-    storage = PicklePersistence(filepath='./storage/store.pkl')
+    storage = PicklePersistence(filepath='./storage/store.pkl', update_interval=15)
     app = Application.builder().token('6181671111:AAFA8OiT0TN4wZm8R6AhqziHmt4VQIhiGwc').persistence(storage).build()
+    job_queue = app.job_queue
+    # logger.warning(JobQueue.get_jobs_by_name(job_queue, 'callback_alarm'))
+    if os.path.exists('./storage/store.pkl'):
+        with open('./storage/store.pkl', 'rb') as f:
+            persistence_file=pickle.load(f)
+        chats = persistence_file.get('chat_data')
+        for chat_id, chat_details in chats.items():
+            job_queue.run_daily(
+                callback=callback_alarm, 
+                chat_id=chat_id,
+                days=(4,), # пятница=4
+                time = time(hour = 11, minute = 20, second = 1)  # remember UTC time, 14-20 минск 11 20 1
+            )
+            job_queue.run_daily(
+                callback=callback_alarm, 
+                chat_id=chat_id,
+                days=(0,), # пятница=4
+                time = time(hour = 6, minute = 30, second = 1)  # remember UTC time, 14-20 минск 11 20 1
+            )
+            job_queue.run_daily(
+                callback=callback_alarm, 
+                chat_id=chat_id,
+                days=(1,), # пятница=4
+                time = time(hour = 6, minute = 0, second = 1)  # remember UTC time, 14-20 минск 11 20 1
+            )
 
     start_handler = CommandHandler(command='start', callback=start)
     help_handler = CommandHandler(command='help', callback=help)
